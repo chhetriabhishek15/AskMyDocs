@@ -1,0 +1,52 @@
+# Node
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.pnpm-debug.log*
+dist/
+dist-ssr/
+*.local
+
+# Testing
+coverage/
+*.test.js
+*.test.ts
+*.test.tsx
+__tests__/
+tests/
+
+# IDEs
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+
+# Environment
+.env
+.env.local
+.env.*.local
+
+# Logs
+*.log
+logs/
+
+# Temporary files
+tmp/
+temp/
+*.tmp
+
+# Git
+.git
+.gitignore
+
+# Documentation
+*.md
+docs/
+
+# Cursor
+.cursor/
+
+
