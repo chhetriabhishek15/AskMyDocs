@@ -10,11 +10,26 @@ export const healthCheck = async () => {
 }
 
 // Upload
-export const uploadFile = async (file: File) => {
+export interface UploadResponse {
+  task_id: string
+  status: string
+  message: string
+}
+
+export interface TaskStatusResponse {
+  task_id: string
+  status: 'queued' | 'processing' | 'completed' | 'failed'
+  progress: number
+  message: string
+  error?: string | null
+  document_id?: string | null
+}
+
+export const uploadFile = async (file: File): Promise<UploadResponse> => {
   const formData = new FormData()
   formData.append('file', file)
   
-  const response = await apiClient.post('/upload', formData, {
+  const response = await apiClient.post<UploadResponse>('/upload', formData, {
     headers: {
       'Content-Type': 'multipart/form-data',
     },
@@ -22,23 +37,37 @@ export const uploadFile = async (file: File) => {
   return response.data
 }
 
+export const getTaskStatus = async (taskId: string): Promise<TaskStatusResponse> => {
+  const response = await apiClient.get<TaskStatusResponse>(`/upload/${taskId}/status`)
+  return response.data
+}
+
 // Chat
 export interface ChatRequest {
-  message: string
+  query: string
   session_id: string
+  top_k?: number
+  min_score?: number
+  document_id?: string | null
+}
+
+export interface SourceInfo {
+  chunk_id: string
+  document_id: string
+  document_filename: string
+  similarity_score: number
+  preview: string
 }
 
 export interface ChatResponse {
-  reply: string
+  answer: string
+  sources: SourceInfo[]
   session_id: string
-  sources: Array<{
-    chunk_id: string
-    document_id: string
-    document_filename: string
-    relevance_score: number
-    preview: string
-  }>
-  timestamp: string
+  usage: {
+    prompt_tokens?: number
+    completion_tokens?: number
+    total_tokens?: number
+  }
 }
 
 export const sendChatMessage = async (data: ChatRequest): Promise<ChatResponse> => {

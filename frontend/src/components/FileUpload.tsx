@@ -1,30 +1,54 @@
 import { useCallback, useState } from 'react'
 import { useDropzone } from 'react-dropzone'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
-import { uploadFile } from '../api/endpoints'
+import { uploadFile, UploadResponse } from '../api/endpoints'
+import UploadProgress from './UploadProgress'
 
 interface FileUploadProps {
   onUploadSuccess?: (taskId: string) => void
 }
 
+interface UploadTask {
+  taskId: string
+  filename: string
+  file: File
+}
+
 const FileUpload: React.FC<FileUploadProps> = ({ onUploadSuccess }) => {
-  const [uploadedFiles, setUploadedFiles] = useState<File[]>([])
+  const [uploadTasks, setUploadTasks] = useState<UploadTask[]>([])
   const queryClient = useQueryClient()
 
   const uploadMutation = useMutation({
     mutationFn: uploadFile,
-    onSuccess: (data) => {
-      queryClient.invalidateQueries({ queryKey: ['documents'] })
+    onSuccess: (data: UploadResponse, file: File) => {
+      // Add task to tracking list
+      setUploadTasks((prev) => [
+        ...prev,
+        {
+          taskId: data.task_id,
+          filename: file.name,
+          file: file,
+        },
+      ])
+
       if (onUploadSuccess && data.task_id) {
         onUploadSuccess(data.task_id)
       }
     },
   })
 
+  const handleUploadComplete = (taskId: string) => {
+    // Refresh documents list when upload completes
+    queryClient.invalidateQueries({ queryKey: ['documents'] })
+    // Note: Auto-removal is handled by UploadProgress component
+  }
+
+  const handleDismissTask = (taskId: string) => {
+    setUploadTasks((prev) => prev.filter((task) => task.taskId !== taskId))
+  }
+
   const onDrop = useCallback(
     async (acceptedFiles: File[]) => {
-      setUploadedFiles((prev) => [...prev, ...acceptedFiles])
-
       // Upload each file
       for (const file of acceptedFiles) {
         try {
@@ -95,35 +119,37 @@ const FileUpload: React.FC<FileUploadProps> = ({ onUploadSuccess }) => {
       </div>
 
       {uploadMutation.isPending && (
-        <div className="mt-4 p-4 bg-blue-50 rounded-lg">
-          <p className="text-blue-700">Uploading files...</p>
+        <div className="mt-4 p-3 bg-blue-50 rounded-lg border border-blue-200">
+          <p className="text-blue-700 text-sm">Uploading files...</p>
         </div>
       )}
 
       {uploadMutation.isError && (
-        <div className="mt-4 p-4 bg-red-50 rounded-lg">
-          <p className="text-red-700">
+        <div className="mt-4 p-3 bg-red-50 rounded-lg border border-red-200">
+          <p className="text-red-700 text-sm">
             Upload failed: {uploadMutation.error instanceof Error ? uploadMutation.error.message : 'Unknown error'}
           </p>
         </div>
       )}
 
-      {uploadMutation.isSuccess && (
-        <div className="mt-4 p-4 bg-green-50 rounded-lg">
-          <p className="text-green-700">Files uploaded successfully!</p>
-        </div>
-      )}
-
-      {uploadedFiles.length > 0 && (
+      {/* Upload Progress for each file */}
+      {uploadTasks.length > 0 && (
         <div className="mt-4">
-          <h3 className="text-sm font-medium text-gray-700 mb-2">Selected Files:</h3>
-          <ul className="space-y-1">
-            {uploadedFiles.map((file, index) => (
-              <li key={index} className="text-sm text-gray-600">
-                {file.name} ({(file.size / 1024 / 1024).toFixed(2)} MB)
-              </li>
+          <h3 className="text-sm font-medium text-gray-700 mb-2">
+            Processing {uploadTasks.length} file{uploadTasks.length > 1 ? 's' : ''}...
+          </h3>
+          <div className="space-y-2">
+            {uploadTasks.map((task) => (
+              <UploadProgress
+                key={task.taskId}
+                taskId={task.taskId}
+                filename={task.filename}
+                onComplete={(documentId) => handleUploadComplete(task.taskId)}
+                onError={(error) => console.error(`Task ${task.taskId} error:`, error)}
+                onDismiss={() => handleDismissTask(task.taskId)}
+              />
             ))}
-          </ul>
+          </div>
         </div>
       )}
     </div>
