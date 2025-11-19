@@ -15,21 +15,22 @@ class Settings(BaseSettings):
     DEBUG: bool = False
     LOG_LEVEL: str = "INFO"
 
-    # Database
-    DATABASE_URL: str
-
-    # Embedding Model
-    EMBEDDING_MODEL: str = "sentence-transformers/all-MiniLM-L6-v2"
-    EMBEDDING_DIMENSION: int = 384
+    # ChromaDB Configuration
+    CHROMA_DB_PATH: str = "./chroma_db"  # Persistent storage path
+    CHROMA_COLLECTION_NAME: str = "documents"
+    # ChromaDB handles embeddings internally - can use default or custom embedding function
+    CHROMA_EMBEDDING_FUNCTION: str | None = None  # None = use default, or specify custom function
 
     # Docling Chunking
-    CHUNK_SIZE: int = 512
-    CHUNK_OVERLAP: int = 50
-    MIN_CHUNK_SIZE: int = 100
+    CHUNK_SIZE: int = 512  # Max tokens per chunk
+    CHUNK_OVERLAP: int = 50  # Not used by HybridChunker (uses merge_peers instead)
+    MIN_CHUNK_SIZE: int = 100  # Not used by HybridChunker
+    CHUNKER_TOKENIZER_MODEL: str = "sentence-transformers/all-MiniLM-L6-v2"  # Tokenizer for HybridChunker
+    CHUNKER_MERGE_PEERS: bool = True  # Merge small adjacent chunks
 
     # Retrieval
     TOP_K_RETRIEVAL: int = 5
-    MIN_SIMILARITY_SCORE: float = 0.7
+    MIN_SIMILARITY_SCORE: float = 0.5  # Lowered from 0.7 - actual scores are typically 0.55-0.65
 
     # LLM
     GEMINI_API_KEY: str
@@ -37,11 +38,13 @@ class Settings(BaseSettings):
     GEMINI_TEMPERATURE: float = 0.7
     GEMINI_MAX_TOKENS: int = 2048
 
-    # Memori
-    MEMORI_DATABASE_CONNECTION: str
-    MEMORI_CONSCIOUS_INGEST: bool = True
-    MEMORI_AUTO_INGEST: bool = True
-    MEMORI_NAMESPACE: str = "production"
+    # Memori Configuration
+    MEMORI_DATABASE_CONNECTION: str | None = None  # PostgreSQL/SQLite connection string
+    MEMORI_USE_SQLITE_FALLBACK: bool = True  # Use SQLite if ChromaDB format not supported
+    MEMORI_SQLITE_PATH: str = "./memory.db"  # Path for SQLite fallback
+    MEMORI_CONSCIOUS_INGEST: bool = True  # Short-term working memory
+    MEMORI_AUTO_INGEST: bool = True  # Dynamic search per query
+    MEMORI_NAMESPACE: str = "production"  # Memory namespace for isolation
 
     # CORS - Store as string in .env, converted to list by validator
     CORS_ORIGINS: Union[str, List[str]] = "http://localhost:3000,http://localhost:5173"
